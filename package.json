@@ -2,7 +2,7 @@
     "name": "thebill2001-vscode-clazy",
     "displayName": "Clazy",
     "description": "VSCode extension for Clazy",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "license": "GPL-3.0-only",
     "repository": {
         "url": "https://github.com/TheBill2001/vscode-clazy"
@@ -121,7 +121,7 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "pnpm run compile",
+        "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "lint": "eslint src",
