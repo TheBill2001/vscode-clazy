@@ -1,0 +1,146 @@
+{
+    "name": "thebill2001.clazy",
+    "displayName": "Clazy",
+    "description": "VSCode extension for Clazy",
+    "version": "0.0.1",
+    "license": "GPL-3.0-only",
+    "repository": {
+        "url": "https://github.com/TheBill2001/vscode-clazy"
+    },
+    "icon": "https://kde.org/stuff/clipart/logo/kde-logo-white-blue-rounded-3000x3000.png",
+    "engines": {
+        "vscode": "^1.98.0"
+    },
+    "categories": [
+        "Linters"
+    ],
+    "activationEvents": [
+        "onLanguage:cpp",
+        "onLanguage:c"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "clazy.lintFile",
+                "title": "Clazy: Lint File"
+            },
+            {
+                "command": "clazy.fixFile",
+                "title": "Clazy: fix File"
+            },
+            {
+                "command": "clazy.lintOpenFiles",
+                "title": "Clazy: Lint Open Files"
+            }
+        ],
+        "configuration": {
+            "title": "Clazy",
+            "properties": {
+                "clazy.executable": {
+                    "type": "string",
+                    "default": "clazy-standalone",
+                    "markdownDescription": "Path to Clazy standalone executable. Default is `clazy-standalone`"
+                },
+                "clazy.checks": {
+                    "type": "array",
+                    "default": [
+                        "level1"
+                    ],
+                    "markdownDescription": "Comma-separated list of clazy checks. Default is `level1`"
+                },
+                "clazy.extraArg": {
+                    "type": "array",
+                    "default": [
+                        "-Wno-unknown-warning-option"
+                    ],
+                    "description": "Additional argument to append to the compiler command line"
+                },
+                "clazy.extraArgBefore": {
+                    "type": "array",
+                    "default": [
+                        "-Wno-unknown-warning-option"
+                    ],
+                    "description": "Additional argument to prepend to the compiler command line"
+                },
+                "clazy.headerFilter": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Regular expression matching the names of the headers to output diagnostics from. Diagnostics from the main file of each translation unit are always displayed"
+                },
+                "clazy.ignoreDirs": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Regular expression matching the names of the directories for which diagnostics should never be emitted. Useful for ignoring 3rdparty code"
+                },
+                "clazy.ignoreIncludedFiles": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Only emit warnings for the current file being compiled and ignore any includes. Useful for performance reasons. Have a look at a Clazy check's README*.md file to see if it supports this feature or not"
+                },
+                "clazy.onlyQt": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Won't emit warnings for non-Qt files, or in other words, if -DQT_CORE_LIB is missing"
+                },
+                "clazy.qtDeveloper": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "For running clazy on Qt itself, optional, but honours specific guidelines"
+                },
+                "clazy.vfsoverlay": {
+                    "type": "string",
+                    "default": "",
+                    "description": "YAML file to overlay the virtual filesystem described by file over the real file system"
+                },
+                "clazy.visitImplicitCode": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "For visiting implicit code like compiler generated constructors. None of the built-in checks benefit from this, but can be useful for custom checks"
+                },
+                "clazy.buildPath": {
+                    "type": "string",
+                    "default": "build",
+                    "description": "Path to the build folder. This folder should be where the compilation database JSON file locates at"
+                },
+                "clazy.blacklist": {
+                    "type": "array",
+                    "description": "A list of regular expressions matching files you don't want to lint. Default to build folder"
+                },
+                "clazy.lintOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically lint files when they are saved"
+                },
+                "clazy.fixOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Automatically fix resolvable errors detected by Clazy in files when they are saved"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "pnpm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src",
+        "format": "prettier --write --ignore-unknown ."
+    },
+    "dependencies": {
+        "yaml": "^2.7.0"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "20.x",
+        "@types/vscode": "^1.98.0",
+        "@typescript-eslint/eslint-plugin": "^8.25.0",
+        "@typescript-eslint/parser": "^8.27.0",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1",
+        "eslint": "^9.21.0",
+        "prettier": "^3.5.3",
+        "prettier-eslint": "^16.3.0",
+        "typescript": "^5.7.3"
+    }
+}
