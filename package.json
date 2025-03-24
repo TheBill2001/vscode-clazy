@@ -1,5 +1,5 @@
 {
-    "name": "thebill2001.clazy",
+    "name": "thebill2001-vscode-clazy",
     "displayName": "Clazy",
     "description": "VSCode extension for Clazy",
     "version": "0.0.1",
@@ -7,7 +7,7 @@
     "repository": {
         "url": "https://github.com/TheBill2001/vscode-clazy"
     },
-    "icon": "https://kde.org/stuff/clipart/logo/kde-logo-white-blue-rounded-3000x3000.png",
+    "icon": "kde-logo.png",
     "engines": {
         "vscode": "^1.98.0"
     },
@@ -138,6 +138,7 @@
         "@typescript-eslint/parser": "^8.27.0",
         "@vscode/test-cli": "^0.0.10",
         "@vscode/test-electron": "^2.4.1",
+        "@vscode/vsce": "^3.3.0",
         "eslint": "^9.21.0",
         "prettier": "^3.5.3",
         "prettier-eslint": "^16.3.0",
