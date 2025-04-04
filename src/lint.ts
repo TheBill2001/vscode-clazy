@@ -14,26 +14,9 @@ import Clazy, { ClazyDiagnostic, ClazyReplacement, ClazyResult } from "./clazy";
 import ClazyRefactorActionProvider from "./action";
 import Config from "./config";
 
-async function fix(document: TextDocument, replacements: ClazyReplacement[]) {
-    const changes = new WorkspaceEdit();
-    for (const replacement of replacements) {
-        changes.replace(
-            document.uri,
-            new Range(
-                document.positionAt(replacement.offset),
-                document.positionAt(replacement.offset + replacement.length),
-            ),
-            replacement.replacementText,
-        );
-    }
-    await workspace.applyEdit(changes);
-    workspace.save(document.uri);
-}
-
 async function makeDiagnostics(
     document: TextDocument,
     diagnostic: ClazyDiagnostic,
-    fixErrors: boolean,
 ) {
     const diagnosticName = diagnostic.diagnosticName.startsWith("clazy-")
         ? diagnostic.diagnosticName.slice(6)
@@ -46,33 +29,24 @@ async function makeDiagnostics(
         ),
     };
     if (diagnosticMessage.replacements.length > 0) {
-        if (fixErrors) {
-            await fix(document, diagnosticMessage.replacements);
-            return [];
-        } else {
-            return diagnosticMessage.replacements.map((replacement) => {
-                const beginPos = document.positionAt(replacement.offset);
-                const endPos = document.positionAt(
-                    replacement.offset + replacement.length,
-                );
+        const replacements = diagnosticMessage.replacements;
 
-                let diagnostic = new Diagnostic(
-                    new Range(beginPos, endPos),
-                    diagnosticMessage.message,
-                    diagnosticMessage.severity,
-                );
-                diagnostic.source = "clazy";
-                diagnostic.code = diagnosticCode;
+        const beginPos = document.positionAt(replacements[0].offset);
+        const endPos = document.positionAt(
+            Math.max(...replacements.map((e) => e.offset + e.length)),
+        );
 
-                ClazyRefactorActionProvider.add(
-                    document,
-                    diagnostic,
-                    replacement,
-                );
+        let diagnostic = new Diagnostic(
+            new Range(beginPos, endPos),
+            diagnosticMessage.message,
+            diagnosticMessage.severity,
+        );
+        diagnostic.source = "clazy";
+        diagnostic.code = diagnosticCode;
 
-                return diagnostic;
-            });
-        }
+        ClazyRefactorActionProvider.add(diagnostic, replacements);
+
+        return diagnostic;
     } else {
         const line = document.positionAt(diagnosticMessage.fileOffset).line;
         let diagnostic = new Diagnostic(
@@ -82,14 +56,13 @@ async function makeDiagnostics(
         );
         diagnostic.source = "clazy";
         diagnostic.code = diagnosticCode;
-        return [diagnostic];
+        return diagnostic;
     }
 }
 
 async function getDiagnostics(
     diagnostics: ClazyDiagnostic[],
     document: TextDocument,
-    fixErrors: boolean,
 ) {
     const result = diagnostics.reduce(
         async (previousValue, currentValue) => {
@@ -99,11 +72,13 @@ async function getDiagnostics(
                     currentValue.diagnosticMessage.filePath,
                 )
             ) {
-                (
-                    await makeDiagnostics(document, currentValue, fixErrors)
-                ).forEach(async (element) =>
-                    (await previousValue).push(element),
+                const diagnostic = await makeDiagnostics(
+                    document,
+                    currentValue,
                 );
+                if (diagnostic) {
+                    (await previousValue).push(diagnostic);
+                }
             }
             return previousValue;
         },
@@ -159,7 +134,7 @@ export default class Lint {
         return this.#diagnosticCollection;
     }
 
-    static async #lintDocument(document: TextDocument, fixErrors: boolean) {
+    static async #lintDocument(document: TextDocument) {
         if (!["cpp", "c"].includes(document.languageId)) {
             return [];
         }
@@ -183,18 +158,18 @@ export default class Lint {
             document,
         );
 
-        const diagnostics = await getDiagnostics(output, document, fixErrors);
+        const diagnostics = await getDiagnostics(output, document);
         return diagnostics;
     }
 
-    static async #lintActiveDocument(fixErrors: boolean) {
+    static async lintActiveDocument() {
         if (window.activeTextEditor === undefined) {
             return;
         }
 
         const document = window.activeTextEditor.document;
         if (await document.save()) {
-            const diagnostics = await this.#lintDocument(document, fixErrors);
+            const diagnostics = await this.#lintDocument(document);
             if (diagnostics.length > 0) {
                 this.#diagnosticCollection.set(document.uri, diagnostics);
             } else {
@@ -210,12 +185,8 @@ export default class Lint {
     static async lintDocument(document: TextDocument) {
         this.#diagnosticCollection.set(
             document.uri,
-            await this.#lintDocument(document, Config.fixOnSave),
+            await this.#lintDocument(document),
         );
-    }
-
-    static async lintActiveDocument() {
-        return this.#lintActiveDocument(Config.fixOnSave);
     }
 
     static async lintOpenDocuments() {
@@ -226,22 +197,6 @@ export default class Lint {
             );
         }
     }
-
-    static async fixActiveDocument() {
-        return this.#lintActiveDocument(true);
-    }
-
-    // static async fixOpenDocuments() {
-    //     const value = await workspace.saveAll();
-    //     if (value) {
-    //         for (const document of workspace.textDocuments) {
-    //             this.#diagnosticCollection.set(
-    //                 document.uri,
-    //                 await this.#lintDocument(document, true),
-    //             );
-    //         }
-    //     }
-    // }
 
     static removeDiagnosticForFile(uri: Uri) {
         this.#diagnosticCollection

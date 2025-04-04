@@ -17,16 +17,25 @@ import { ClazyReplacement } from "./clazy";
 
 export default class ClazyRefactorActionProvider implements CodeActionProvider {
     static type = CodeActionKind.QuickFix;
-    static #actions = new Map<Diagnostic, CodeAction>();
+    static #actions = new Map<Diagnostic, ClazyReplacement[]>();
 
     provideCodeActions(
-        _document: TextDocument,
+        document: TextDocument,
         _range: Range | Selection,
         context: CodeActionContext,
         _token: CancellationToken,
     ): ProviderResult<(CodeAction | Command)[]> {
         return context.diagnostics.reduce((acc, diagnostic) => {
-            const action = ClazyRefactorActionProvider.#actions.get(diagnostic);
+            const replacements =
+                ClazyRefactorActionProvider.#actions.get(diagnostic);
+            if (!replacements) {
+                return acc;
+            }
+            const action = ClazyRefactorActionProvider.#createAction(
+                document,
+                diagnostic,
+                replacements,
+            );
             if (action) {
                 acc.push(action);
             }
@@ -37,39 +46,41 @@ export default class ClazyRefactorActionProvider implements CodeActionProvider {
     static #createAction(
         document: TextDocument,
         diagnostic: Diagnostic,
-        replacement: ClazyReplacement,
+        replacements: ClazyReplacement[],
     ): CodeAction | undefined {
         if (diagnostic.source !== "clazy") {
             return;
         }
 
         const changes = new WorkspaceEdit();
-        changes.replace(
-            document.uri,
-            new Range(
-                document.positionAt(replacement.offset),
-                document.positionAt(replacement.offset + replacement.length),
-            ),
-            replacement.replacementText,
-        );
+        for (const replacement of replacements) {
+            changes.replace(
+                document.uri,
+                new Range(
+                    document.positionAt(replacement.offset),
+                    document.positionAt(
+                        replacement.offset + replacement.length,
+                    ),
+                ),
+                replacement.replacementText,
+            );
+        }
 
         return {
-            title: `[Clazy] Change to ${replacement.replacementText}`,
+            title: `[Clazy] Apply fix`,
             diagnostics: [diagnostic],
             kind: CodeActionKind.QuickFix,
             edit: changes,
+            command: {
+                title: "Save",
+                command: "clazy.private.onFixApplied",
+                arguments: [document.uri],
+            },
         };
     }
 
-    static add(
-        document: TextDocument,
-        diagnostic: Diagnostic,
-        replacement: ClazyReplacement,
-    ) {
-        const action = this.#createAction(document, diagnostic, replacement);
-        if (action) {
-            this.#actions.set(diagnostic, action);
-        }
+    static add(diagnostic: Diagnostic, replacements: ClazyReplacement[]) {
+        this.#actions.set(diagnostic, replacements);
     }
 
     static remove(diagnostic: Diagnostic) {

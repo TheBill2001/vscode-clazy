@@ -18,22 +18,17 @@ export function activate(context: ExtensionContext) {
     );
 
     subscriptions.push(
-        commands.registerCommand("clazy.fixFile", () =>
-            Lint.fixActiveDocument(),
-        ),
-    );
-
-    subscriptions.push(
         commands.registerCommand("clazy.lintOpenFiles", () =>
             Lint.lintOpenDocuments(),
         ),
     );
 
-    // subscriptions.push(
-    //     commands.registerCommand("clazy.fixOpenFiles", () =>
-    //         Lint.fixOpenDocuments(),
-    //     ),
-    // );
+    subscriptions.push(
+        commands.registerCommand("clazy.private.onFixApplied", async (uri) => {
+            await workspace.save(uri);
+            Lint.removeDiagnosticForFile(uri);
+        }),
+    );
 
     context.subscriptions.push(
         languages.registerCodeActionsProvider(

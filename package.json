@@ -27,10 +27,6 @@
                 "title": "Clazy: Lint File"
             },
             {
-                "command": "clazy.fixFile",
-                "title": "Clazy: fix File"
-            },
-            {
                 "command": "clazy.lintOpenFiles",
                 "title": "Clazy: Lint Open Files"
             }
@@ -112,11 +108,6 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Automatically lint files when they are saved"
-                },
-                "clazy.fixOnSave": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Automatically fix resolvable errors detected by Clazy in files when they are saved"
                 }
             }
         }

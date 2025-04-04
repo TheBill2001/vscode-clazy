@@ -111,14 +111,6 @@ export default class Config {
         Utils.noSetterMessage("Config.lintOnSave");
     }
 
-    static get fixOnSave() {
-        return this.getConfigValue<boolean>("fixOnSave");
-    }
-
-    static set fixOnSave(_) {
-        Utils.noSetterMessage("Config.fixOnSave");
-    }
-
     static get blacklist() {
         const value = this.getConfigValue<string[]>("blacklist");
         if (value.length > 0) {
