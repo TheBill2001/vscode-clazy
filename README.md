@@ -21,7 +21,6 @@ This extension requires `clazy-standalone` binary. You can find the build instru
 - `clazy.buildPath`: Path to the build folder. This folder should be where the compilation database JSON file locates at.
 - `clazy.blacklist`: A list of regular expressions matching files you don't want to lint. Default to build folder.
 - `clazy.lintOnSave`: Automatically lint files when they are saved. Default is `true`.
-- `clazy.fixOnSave`: Automatically fix resolvable errors detected by Clazy in files when they are saved. Default is `false`.
 
 ## Related project
 
