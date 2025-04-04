@@ -2,7 +2,7 @@
     "name": "vscode-clazy",
     "displayName": "Clazy",
     "description": "VSCode extension for Clazy",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "SEE LICENSE IN LICENSE",
     "repository": {
         "url": "https://github.com/TheBill2001/vscode-clazy"
