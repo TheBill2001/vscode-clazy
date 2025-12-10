@@ -8,4 +8,12 @@ export default {
     singleQuote: false,
     quoteProps: "consistent",
     trailingComma: "all",
+    overrides: [
+        {
+            files: ["*.yml", "*.yaml"],
+            options: {
+                tabWidth: 2,
+            },
+        },
+    ],
 };
