@@ -5,6 +5,8 @@ on:
     push:
         tags:
             - v*
+        branches:
+            - main
 
 defaults:
     run:
@@ -23,11 +25,14 @@ jobs:
                   node-version: "latest"
                   cache: "npm"
                   cache-dependency-path: "package-lock.json"
-            - run: npm install
-            - run: npx vsce package
+            - name: Installing dependencies
+              run: npm install
+            - name: Packaging
+              run: npx vsce package
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   path: vscode-clazy-*.vsix
-            - run: npx vsce publish -p "${{ secrets.VSCE_TOKEN }}"
+            - name: Publish
+              run: npx vsce publish -p "${{ secrets.VSCE_TOKEN }}"
               if: startsWith(github.ref, 'refs/tags/')

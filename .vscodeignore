@@ -5,7 +5,7 @@ src/**
 node_modules/**
 .gitignore
 .yarnrc
-esbuild.js
+esbuild.mjs
 **/tsconfig.json
 **/eslint.config.mjs
 **/prettier.config.mjs

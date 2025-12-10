@@ -309,13 +309,13 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "pnpm run package",
+        "vscode:prepublish": "npm run package",
         "check-types": "tsc --noEmit",
-        "compile": "pnpm run check-types && pnpm run format && pnpm run lint && node esbuild.mjs",
+        "compile": "npm run check-types && npm run format && npm run lint && node esbuild.mjs",
         "watch": "npm-run-all -p watch:*",
         "watch:esbuild": "node esbuild.mjs --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-        "package": "pnpm run check-types && pnpm run format && pnpm run lint && node esbuild.mjs --production",
+        "package": "npm run check-types && npm run format && npm run lint && node esbuild.mjs --production",
         "lint": "eslint src",
         "format": "prettier --write --ignore-unknown ."
     },
