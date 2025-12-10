@@ -43,6 +43,12 @@ jobs:
     steps:
       - name: Checkout ${{ github.repository }}
         uses: actions/checkout@v6
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "latest"
+          cache: "npm"
+          cache-dependency-path: "package-lock.json"
       - name: Download artifact
         uses: actions/download-artifact@v5
       - name: Extract release notes
@@ -61,4 +67,4 @@ jobs:
           VERSION="${TAG#v}"
 
           npx vsce publish "vscode-clazy-${VERSION}.vsix" -p "${{ secrets.VSCE_TOKEN }}"
-          # npx ovsx publish "vscode-clazy-${VERSION}.vsix" -p "${{ secrets.OVSX_TOKEN }}"
+          npx ovsx publish "vscode-clazy-${VERSION}.vsix" -p "${{ secrets.OVSX_TOKEN }}"
