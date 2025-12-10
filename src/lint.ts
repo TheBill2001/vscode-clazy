@@ -144,88 +144,113 @@ export default class Lint {
     static lintDocument(document: TextDocument) {
         Log.info(`Linting document: ${document.uri.toString()}`);
 
-        runClazy(document.uri.fsPath)?.then((clazyDiagnostics) => {
-            if (clazyDiagnostics.length <= 0) {
-                return;
-            }
-
-            const fixClazyDiagnostics = fixDiagnosticRanges(
-                clazyDiagnostics,
-                document,
-            );
-
-            // Dedup
-            for (let index1 = 0; index1 < clazyDiagnostics.length; ++index1) {
-                const d1 = clazyDiagnostics[index1];
-                for (
-                    let index2 = index1 + 1;
-                    index2 < clazyDiagnostics.length;
-                ) {
-                    const d2 = clazyDiagnostics[index2];
-
-                    if (
-                        d1.diagnosticName !== d2.diagnosticName ||
-                        d1.diagnosticMessage.message !==
-                            d2.diagnosticMessage.message ||
-                        d1.diagnosticMessage.filePath !==
-                            d2.diagnosticMessage.filePath ||
-                        d1.diagnosticMessage.severity !==
-                            d2.diagnosticMessage.severity ||
-                        d1.diagnosticMessage.fileOffset !==
-                            d2.diagnosticMessage.fileOffset ||
-                        d1.diagnosticMessage.row !== d2.diagnosticMessage.row ||
-                        d1.diagnosticMessage.column !==
-                            d2.diagnosticMessage.column
-                    ) {
-                        ++index2;
-                        continue;
+        runClazy(document.uri.fsPath)
+            ?.then(
+                (
+                    clazyDiagnostics,
+                ): Map<Diagnostic, ClazyReplacement[]> | undefined => {
+                    if (clazyDiagnostics.length <= 0) {
+                        return;
                     }
 
-                    if (
-                        d1.diagnosticMessage.replacements.length <
-                        d2.diagnosticMessage.replacements.length
-                    ) {
-                        d1.diagnosticMessage.replacements =
-                            d2.diagnosticMessage.replacements;
-                    }
-
-                    if (
-                        d1.relatedInformation !== d2.relatedInformation &&
-                        !d1.relatedInformation
-                    ) {
-                        d1.relatedInformation = d2.relatedInformation;
-                    }
-
-                    clazyDiagnostics.splice(index2, 1);
-                }
-            }
-
-            const diagnostics: Diagnostic[] = [];
-            for (const clazyDiagnostic of fixClazyDiagnostics) {
-                if (
-                    workspace.asRelativePath(document.fileName) ===
-                    workspace.asRelativePath(
-                        clazyDiagnostic.diagnosticMessage.filePath,
-                    )
-                ) {
-                    const [diagnostic, resplacements] = makeVSCodeDiagnostics(
+                    const fixClazyDiagnostics = fixDiagnosticRanges(
+                        clazyDiagnostics,
                         document,
-                        clazyDiagnostic,
                     );
 
-                    diagnostics.push(diagnostic);
+                    // Dedup
+                    for (
+                        let index1 = 0;
+                        index1 < clazyDiagnostics.length;
+                        ++index1
+                    ) {
+                        const d1 = clazyDiagnostics[index1];
+                        for (
+                            let index2 = index1 + 1;
+                            index2 < clazyDiagnostics.length;
+                        ) {
+                            const d2 = clazyDiagnostics[index2];
 
-                    if (resplacements.length > 0) {
-                        ClazyRefactorActionProvider.addDiagnostic(
-                            diagnostic,
-                            resplacements,
-                        );
+                            if (
+                                d1.diagnosticName !== d2.diagnosticName ||
+                                d1.diagnosticMessage.message !==
+                                    d2.diagnosticMessage.message ||
+                                d1.diagnosticMessage.filePath !==
+                                    d2.diagnosticMessage.filePath ||
+                                d1.diagnosticMessage.severity !==
+                                    d2.diagnosticMessage.severity ||
+                                d1.diagnosticMessage.fileOffset !==
+                                    d2.diagnosticMessage.fileOffset ||
+                                d1.diagnosticMessage.row !==
+                                    d2.diagnosticMessage.row ||
+                                d1.diagnosticMessage.column !==
+                                    d2.diagnosticMessage.column
+                            ) {
+                                ++index2;
+                                continue;
+                            }
+
+                            if (
+                                d1.diagnosticMessage.replacements.length <
+                                d2.diagnosticMessage.replacements.length
+                            ) {
+                                d1.diagnosticMessage.replacements =
+                                    d2.diagnosticMessage.replacements;
+                            }
+
+                            if (
+                                d1.relatedInformation !==
+                                    d2.relatedInformation &&
+                                !d1.relatedInformation
+                            ) {
+                                d1.relatedInformation = d2.relatedInformation;
+                            }
+
+                            clazyDiagnostics.splice(index2, 1);
+                        }
                     }
-                }
-            }
 
-            this.#diagnosticCollection.set(document.uri, diagnostics);
-        });
+                    const diagnostics = new Map<
+                        Diagnostic,
+                        ClazyReplacement[]
+                    >();
+                    for (const clazyDiagnostic of fixClazyDiagnostics) {
+                        if (
+                            workspace.asRelativePath(document.fileName) ===
+                            workspace.asRelativePath(
+                                clazyDiagnostic.diagnosticMessage.filePath,
+                            )
+                        ) {
+                            const [diagnostic, replacements] =
+                                makeVSCodeDiagnostics(
+                                    document,
+                                    clazyDiagnostic,
+                                );
+                            diagnostics.set(diagnostic, replacements);
+                        }
+                    }
+                    return diagnostics;
+                },
+            )
+            .then((diagnostics) => {
+                Lint.removeDiagnosticForUri(document.uri);
+
+                if (diagnostics) {
+                    for (const [diagnostic, replacements] of diagnostics) {
+                        if (replacements.length > 0) {
+                            ClazyRefactorActionProvider.addDiagnostic(
+                                diagnostic,
+                                replacements,
+                            );
+                        }
+                    }
+
+                    this.#diagnosticCollection.set(
+                        document.uri,
+                        Array.from(diagnostics.keys()),
+                    );
+                }
+            });
     }
 
     static removeDiagnosticForUri(uri: Uri) {

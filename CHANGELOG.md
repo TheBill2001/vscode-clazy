@@ -5,6 +5,10 @@ All notable changes to the "vscode-clazy" extension will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.1.1
+
+- Fix old diagnostics not being removed properly.
+
 ## v1.1.0
 
 A lot of refactoring and update dependencies:
