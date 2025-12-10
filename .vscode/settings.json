@@ -1,15 +1,25 @@
 {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSaveMode": "file",
-    "files.autoSave": "onFocusChange",
-    "editor.formatOnSave": true,
     "files.exclude": {
-        "out": false
+        "out": true,
+        "dist": true
     },
     "search.exclude": {
-        "out": true
+        "out": true,
+        "dist": true
     },
     "typescript.tsc.autoDetect": "off",
+    "[javascript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
         "*.ts": "${capture}.js",

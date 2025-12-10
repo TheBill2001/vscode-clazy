@@ -16,10 +16,11 @@ This extension requires `clazy-standalone` binary. You can find the build instru
 
 ## Extension Settings
 
+The main configuration options:
+
 - `clazy.executable`: Path to Clazy standalone executable. Default is `clazy-standalone`.
-- `clazy.checks`: Comma-separated list of clazy checks. Default is `level1`.
+- `clazy.checks`: Array of clazy checks. Default are `level0` and `level1`.
 - `clazy.buildPath`: Path to the build folder. This folder should be where the compilation database JSON file locates at.
-- `clazy.blacklist`: A list of regular expressions matching files you don't want to lint. Default to build folder.
 - `clazy.lintOnSave`: Automatically lint files when they are saved. Default is `true`.
 
 ## Related project

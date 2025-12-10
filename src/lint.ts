@@ -1,103 +1,85 @@
 import {
-    languages,
-    window,
-    workspace,
-    DiagnosticCollection,
-    TextDocument,
     Diagnostic,
+    DiagnosticRelatedInformation,
+    languages,
+    Location,
+    Position,
     Range,
+    TextDocument,
     Uri,
-    WorkspaceEdit,
+    workspace,
 } from "vscode";
-
-import Clazy, { ClazyDiagnostic, ClazyReplacement, ClazyResult } from "./clazy";
+import Log from "./log";
+import { ClazyDiagnostic, ClazyReplacement, runClazy } from "./clazy";
 import ClazyRefactorActionProvider from "./action";
-import Config from "./config";
 
-async function makeDiagnostics(
+function makeVSCodeDiagnostics(
     document: TextDocument,
-    diagnostic: ClazyDiagnostic,
-) {
-    const diagnosticName = diagnostic.diagnosticName.startsWith("clazy-")
-        ? diagnostic.diagnosticName.slice(6)
-        : diagnostic.diagnosticName;
-    const diagnosticMessage = diagnostic.diagnosticMessage;
+    clazyDiagnostic: ClazyDiagnostic,
+): [Diagnostic, ClazyReplacement[]] {
+    const diagnosticName = clazyDiagnostic.diagnosticName.startsWith("clazy-")
+        ? clazyDiagnostic.diagnosticName.slice(6)
+        : clazyDiagnostic.diagnosticName;
+    const diagnosticMessage = clazyDiagnostic.diagnosticMessage;
     const diagnosticCode = {
         value: diagnosticName,
         target: Uri.parse(
             `https://github.com/KDE/clazy/tree/master/docs/checks/README-${diagnosticName}.md`,
         ),
     };
-    if (diagnosticMessage.replacements.length > 0) {
-        const replacements = diagnosticMessage.replacements;
 
-        const beginPos = document.positionAt(replacements[0].offset);
+    let diagnostic: Diagnostic;
+    if (diagnosticMessage.replacements.length > 0) {
+        const beginPos = document.positionAt(
+            diagnosticMessage.replacements[0].offset,
+        );
         const endPos = document.positionAt(
-            Math.max(...replacements.map((e) => e.offset + e.length)),
+            Math.max(
+                ...diagnosticMessage.replacements.map(
+                    (e) => e.offset + e.length,
+                ),
+            ),
         );
 
-        let diagnostic = new Diagnostic(
+        diagnostic = new Diagnostic(
             new Range(beginPos, endPos),
             diagnosticMessage.message,
             diagnosticMessage.severity,
         );
-        diagnostic.source = "clazy";
-        diagnostic.code = diagnosticCode;
-
-        ClazyRefactorActionProvider.add(diagnostic, replacements);
-
-        return diagnostic;
     } else {
-        const line = document.positionAt(diagnosticMessage.fileOffset).line;
-        let diagnostic = new Diagnostic(
-            new Range(line, 0, line, Number.MAX_VALUE),
+        diagnostic = new Diagnostic(
+            new Range(
+                diagnosticMessage.row!,
+                diagnosticMessage.column!,
+                diagnosticMessage.row!,
+                diagnosticMessage.column! + 1,
+            ),
             diagnosticMessage.message,
             diagnosticMessage.severity,
         );
-        diagnostic.source = "clazy";
-        diagnostic.code = diagnosticCode;
-        return diagnostic;
     }
+
+    if (clazyDiagnostic.relatedInformation) {
+        diagnostic.relatedInformation = clazyDiagnostic.relatedInformation.map(
+            (item) =>
+                new DiagnosticRelatedInformation(
+                    new Location(
+                        Uri.file(item.filePath),
+                        new Position(item.row, item.column),
+                    ),
+                    item.message,
+                ),
+        );
+    }
+
+    diagnostic.source = "clazy";
+    diagnostic.code = diagnosticCode;
+    diagnostic.message = diagnosticMessage.message;
+
+    return [diagnostic, diagnosticMessage.replacements];
 }
 
-async function getDiagnostics(
-    diagnostics: ClazyDiagnostic[],
-    document: TextDocument,
-) {
-    const result = diagnostics.reduce(
-        async (previousValue, currentValue) => {
-            if (
-                workspace.asRelativePath(document.fileName) ===
-                workspace.asRelativePath(
-                    currentValue.diagnosticMessage.filePath,
-                )
-            ) {
-                const diagnostic = await makeDiagnostics(
-                    document,
-                    currentValue,
-                );
-                if (diagnostic) {
-                    (await previousValue).push(diagnostic);
-                }
-            }
-            return previousValue;
-        },
-        Promise.resolve([] as Diagnostic[]),
-    );
-
-    return result;
-}
-
-function isBlacklisted(file: TextDocument) {
-    const blacklist = Config.blacklist;
-    const relativeFilename = workspace.asRelativePath(file.fileName);
-
-    return blacklist.some((entry) => {
-        const regex = new RegExp(entry);
-        return regex.test(relativeFilename);
-    });
-}
-
+// Clazy use 1-based indexing while VSCode use 0-based indexing
 function fixDiagnosticRanges(
     diagnostics: ClazyDiagnostic[],
     document: TextDocument,
@@ -105,9 +87,34 @@ function fixDiagnosticRanges(
     const buffer = Buffer.from(document.getText());
 
     diagnostics.forEach((diagnostic) => {
-        diagnostic.diagnosticMessage.fileOffset = buffer
-            .subarray(0, diagnostic.diagnosticMessage.fileOffset)
-            .toString().length;
+        if (diagnostic.diagnosticMessage.fileOffset !== undefined) {
+            diagnostic.diagnosticMessage.fileOffset = buffer
+                .subarray(0, diagnostic.diagnosticMessage.fileOffset)
+                .toString().length;
+
+            const position = document.positionAt(
+                diagnostic.diagnosticMessage.fileOffset,
+            );
+            diagnostic.diagnosticMessage.row = position.line;
+            diagnostic.diagnosticMessage.column = position.character;
+        } else if (
+            diagnostic.diagnosticMessage.row !== undefined &&
+            diagnostic.diagnosticMessage.column !== undefined
+        ) {
+            diagnostic.diagnosticMessage.row--;
+            diagnostic.diagnosticMessage.column--;
+            diagnostic.diagnosticMessage.fileOffset = document.offsetAt(
+                new Position(
+                    diagnostic.diagnosticMessage.row,
+                    diagnostic.diagnosticMessage.column,
+                ),
+            );
+        }
+
+        diagnostic.relatedInformation?.forEach((item) => {
+            item.row--;
+            item.column--;
+        });
 
         diagnostic.diagnosticMessage.replacements.forEach((replacement) => {
             replacement.length = buffer
@@ -127,81 +134,106 @@ function fixDiagnosticRanges(
 }
 
 export default class Lint {
-    static #diagnosticCollection: DiagnosticCollection =
-        languages.createDiagnosticCollection();
+    static readonly #diagnosticCollection =
+        languages.createDiagnosticCollection("Clazy");
 
     static get diagnosticCollection() {
         return this.#diagnosticCollection;
     }
 
-    static async #lintDocument(document: TextDocument) {
-        if (!["cpp", "c"].includes(document.languageId)) {
-            return [];
-        }
+    static lintDocument(document: TextDocument) {
+        Log.info(`Linting document: ${document.uri.toString()}`);
 
-        if (document.uri.scheme !== "file") {
-            return [];
-        }
+        runClazy(document.uri.fsPath)?.then((clazyDiagnostics) => {
+            if (clazyDiagnostics.length <= 0) {
+                return;
+            }
 
-        const workspaceFolder = workspace.getWorkspaceFolder(document.uri);
-        if (!workspaceFolder) {
-            return [];
-        }
+            const fixClazyDiagnostics = fixDiagnosticRanges(
+                clazyDiagnostics,
+                document,
+            );
 
-        if (isBlacklisted(document)) {
-            return [];
-        }
+            // Dedup
+            for (let index1 = 0; index1 < clazyDiagnostics.length; ++index1) {
+                const d1 = clazyDiagnostics[index1];
+                for (
+                    let index2 = index1 + 1;
+                    index2 < clazyDiagnostics.length;
+                ) {
+                    const d2 = clazyDiagnostics[index2];
 
-        const output = fixDiagnosticRanges(
-            (await Clazy.run([document.uri.fsPath], workspaceFolder.uri.fsPath))
-                .diagnostics,
-            document,
-        );
+                    if (
+                        d1.diagnosticName !== d2.diagnosticName ||
+                        d1.diagnosticMessage.message !==
+                            d2.diagnosticMessage.message ||
+                        d1.diagnosticMessage.filePath !==
+                            d2.diagnosticMessage.filePath ||
+                        d1.diagnosticMessage.severity !==
+                            d2.diagnosticMessage.severity ||
+                        d1.diagnosticMessage.fileOffset !==
+                            d2.diagnosticMessage.fileOffset ||
+                        d1.diagnosticMessage.row !== d2.diagnosticMessage.row ||
+                        d1.diagnosticMessage.column !==
+                            d2.diagnosticMessage.column
+                    ) {
+                        ++index2;
+                        continue;
+                    }
 
-        const diagnostics = await getDiagnostics(output, document);
-        return diagnostics;
-    }
+                    if (
+                        d1.diagnosticMessage.replacements.length <
+                        d2.diagnosticMessage.replacements.length
+                    ) {
+                        d1.diagnosticMessage.replacements =
+                            d2.diagnosticMessage.replacements;
+                    }
 
-    static async lintActiveDocument() {
-        if (window.activeTextEditor === undefined) {
-            return;
-        }
+                    if (
+                        d1.relatedInformation !== d2.relatedInformation &&
+                        !d1.relatedInformation
+                    ) {
+                        d1.relatedInformation = d2.relatedInformation;
+                    }
 
-        const document = window.activeTextEditor.document;
-        if (await document.save()) {
-            const diagnostics = await this.#lintDocument(document);
-            if (diagnostics.length > 0) {
-                this.#diagnosticCollection.set(document.uri, diagnostics);
-            } else {
-                if (isBlacklisted(document)) {
-                    window.showWarningMessage(
-                        `File is blacklisted:\n${document.uri.fsPath}`,
-                    );
+                    clazyDiagnostics.splice(index2, 1);
                 }
             }
-        }
+
+            const diagnostics: Diagnostic[] = [];
+            for (const clazyDiagnostic of fixClazyDiagnostics) {
+                if (
+                    workspace.asRelativePath(document.fileName) ===
+                    workspace.asRelativePath(
+                        clazyDiagnostic.diagnosticMessage.filePath,
+                    )
+                ) {
+                    const [diagnostic, resplacements] = makeVSCodeDiagnostics(
+                        document,
+                        clazyDiagnostic,
+                    );
+
+                    diagnostics.push(diagnostic);
+
+                    if (resplacements.length > 0) {
+                        ClazyRefactorActionProvider.addDiagnostic(
+                            diagnostic,
+                            resplacements,
+                        );
+                    }
+                }
+            }
+
+            this.#diagnosticCollection.set(document.uri, diagnostics);
+        });
     }
 
-    static async lintDocument(document: TextDocument) {
-        this.#diagnosticCollection.set(
-            document.uri,
-            await this.#lintDocument(document),
-        );
-    }
-
-    static async lintOpenDocuments() {
-        const value = await workspace.saveAll();
-        if (value) {
-            workspace.textDocuments.forEach((document) =>
-                Lint.lintDocument(document),
-            );
-        }
-    }
-
-    static removeDiagnosticForFile(uri: Uri) {
+    static removeDiagnosticForUri(uri: Uri) {
         this.#diagnosticCollection
             .get(uri)
-            ?.forEach((value) => ClazyRefactorActionProvider.remove(value));
+            ?.forEach((diagnostic) =>
+                ClazyRefactorActionProvider.removeDiagnostic(diagnostic),
+            );
         this.#diagnosticCollection.delete(uri);
     }
 }

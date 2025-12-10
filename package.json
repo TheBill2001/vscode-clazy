@@ -2,24 +2,23 @@
     "name": "vscode-clazy",
     "displayName": "Clazy",
     "description": "VSCode extension for Clazy",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "license": "SEE LICENSE IN LICENSE",
     "repository": {
         "url": "https://github.com/TheBill2001/vscode-clazy"
     },
     "publisher": "TheBill2001",
-    "icon": "kde-logo.png",
+    "icon": "icon.png",
     "engines": {
-        "vscode": "^1.98.0"
+        "vscode": "^1.106.1"
     },
     "categories": [
         "Linters"
     ],
     "activationEvents": [
-        "onLanguage:cpp",
-        "onLanguage:c"
+        "onLanguage:cpp"
     ],
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "contributes": {
         "commands": [
             {
@@ -28,7 +27,7 @@
             },
             {
                 "command": "clazy.lintOpenFiles",
-                "title": "Clazy: Lint Open Files"
+                "title": "Clazy: Lint All Open Files"
             }
         ],
         "configuration": {
@@ -37,43 +36,244 @@
                 "clazy.executable": {
                     "type": "string",
                     "default": "clazy-standalone",
-                    "markdownDescription": "Path to Clazy standalone executable. Default is `clazy-standalone`"
+                    "markdownDescription": "Path to Clazy standalone executable. Default is `clazy-standalone`."
                 },
                 "clazy.checks": {
                     "type": "array",
                     "default": [
+                        "level0",
                         "level1"
                     ],
-                    "markdownDescription": "Comma-separated list of clazy checks. Default is `level1`"
+                    "uniqueItems": true,
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "assert-with-side-effects",
+                                    "no-assert-with-side-effects",
+                                    "container-inside-loop",
+                                    "no-container-inside-loop",
+                                    "detaching-member",
+                                    "no-detaching-member",
+                                    "heap-allocated-small-trivial-type",
+                                    "no-heap-allocated-small-trivial-type",
+                                    "ifndef-define-typo",
+                                    "no-ifndef-define-typo",
+                                    "isempty-vs-count",
+                                    "no-isempty-vs-count",
+                                    "jni-signatures",
+                                    "no-jni-signatures",
+                                    "qbytearray-conversion-to-c-style",
+                                    "no-qbytearray-conversion-to-c-style",
+                                    "qhash-with-char-pointer-key",
+                                    "no-qhash-with-char-pointer-key",
+                                    "qproperty-type-mismatch",
+                                    "no-qproperty-type-mismatch",
+                                    "qrequiredresult-candidates",
+                                    "no-qrequiredresult-candidates",
+                                    "qstring-varargs",
+                                    "no-qstring-varargs",
+                                    "qt-keyword-emit",
+                                    "no-qt-keyword-emit",
+                                    "qt-keywords",
+                                    "no-qt-keywords",
+                                    "qvariant-template-instantiation",
+                                    "no-qvariant-template-instantiation",
+                                    "raw-environment-function",
+                                    "no-raw-environment-function",
+                                    "reserve-candidates",
+                                    "no-reserve-candidates",
+                                    "sanitize-inline-keyword",
+                                    "no-sanitize-inline-keyword",
+                                    "signal-with-return-value",
+                                    "no-signal-with-return-value",
+                                    "thread-with-slots",
+                                    "no-thread-with-slots",
+                                    "tr-non-literal",
+                                    "no-tr-non-literal",
+                                    "unexpected-flag-enumerator-value",
+                                    "no-unexpected-flag-enumerator-value",
+                                    "unneeded-cast",
+                                    "no-unneeded-cast",
+                                    "unused-result-check",
+                                    "no-unused-result-check",
+                                    "use-arrow-operator-instead-of-data",
+                                    "no-use-arrow-operator-instead-of-data",
+                                    "use-chrono-in-qtimer",
+                                    "no-use-chrono-in-qtimer",
+                                    "used-qunused-variable",
+                                    "no-used-qunused-variable",
+                                    "connect-by-name",
+                                    "no-connect-by-name",
+                                    "connect-non-signal",
+                                    "no-connect-non-signal",
+                                    "connect-not-normalized",
+                                    "no-connect-not-normalized",
+                                    "container-anti-pattern",
+                                    "no-container-anti-pattern",
+                                    "empty-qstringliteral",
+                                    "no-empty-qstringliteral",
+                                    "fully-qualified-moc-types",
+                                    "no-fully-qualified-moc-types",
+                                    "lambda-in-connect",
+                                    "no-lambda-in-connect",
+                                    "lambda-unique-connection",
+                                    "no-lambda-unique-connection",
+                                    "lowercase-qml-type-name",
+                                    "no-lowercase-qml-type-name",
+                                    "mutable-container-key",
+                                    "no-mutable-container-key",
+                                    "no-module-include",
+                                    "no-no-module-include",
+                                    "overloaded-signal",
+                                    "no-overloaded-signal",
+                                    "qcolor-from-literal",
+                                    "no-qcolor-from-literal",
+                                    "qdatetime-utc",
+                                    "no-qdatetime-utc",
+                                    "qenums",
+                                    "no-qenums",
+                                    "qfileinfo-exists",
+                                    "no-qfileinfo-exists",
+                                    "qgetenv",
+                                    "no-qgetenv",
+                                    "qmap-with-pointer-key",
+                                    "no-qmap-with-pointer-key",
+                                    "qstring-arg",
+                                    "no-qstring-arg",
+                                    "qstring-comparison-to-implicit-char",
+                                    "no-qstring-comparison-to-implicit-char",
+                                    "qstring-insensitive-allocation",
+                                    "no-qstring-insensitive-allocation",
+                                    "qstring-ref",
+                                    "no-qstring-ref",
+                                    "qt-macros",
+                                    "no-qt-macros",
+                                    "strict-iterators",
+                                    "no-strict-iterators",
+                                    "temporary-iterator",
+                                    "no-temporary-iterator",
+                                    "unused-non-trivial-variable",
+                                    "no-unused-non-trivial-variable",
+                                    "use-static-qregularexpression",
+                                    "no-use-static-qregularexpression",
+                                    "writing-to-temporary",
+                                    "no-writing-to-temporary",
+                                    "wrong-qevent-cast",
+                                    "no-wrong-qevent-cast",
+                                    "wrong-qglobalstatic",
+                                    "no-wrong-qglobalstatic",
+                                    "auto-unexpected-qstringbuilder",
+                                    "no-auto-unexpected-qstringbuilder",
+                                    "child-event-qobject-cast",
+                                    "no-child-event-qobject-cast",
+                                    "connect-3arg-lambda",
+                                    "no-connect-3arg-lambda",
+                                    "const-signal-or-slot",
+                                    "no-const-signal-or-slot",
+                                    "detaching-temporary",
+                                    "no-detaching-temporary",
+                                    "foreach",
+                                    "no-foreach",
+                                    "incorrect-emit",
+                                    "no-incorrect-emit",
+                                    "install-event-filter",
+                                    "no-install-event-filter",
+                                    "non-pod-global-static",
+                                    "no-non-pod-global-static",
+                                    "overridden-signal",
+                                    "no-overridden-signal",
+                                    "post-event",
+                                    "no-post-event",
+                                    "qdeleteall",
+                                    "no-qdeleteall",
+                                    "qhash-namespace",
+                                    "no-qhash-namespace",
+                                    "qlatin1string-non-ascii",
+                                    "no-qlatin1string-non-ascii",
+                                    "qproperty-without-notify",
+                                    "no-qproperty-without-notify",
+                                    "qstring-left",
+                                    "no-qstring-left",
+                                    "range-loop-detach",
+                                    "no-range-loop-detach",
+                                    "range-loop-reference",
+                                    "no-range-loop-reference",
+                                    "readlock-detaching",
+                                    "no-readlock-detaching",
+                                    "returning-data-from-temporary",
+                                    "no-returning-data-from-temporary",
+                                    "rule-of-two-soft",
+                                    "no-rule-of-two-soft",
+                                    "skipped-base-method",
+                                    "no-skipped-base-method",
+                                    "virtual-signal",
+                                    "no-virtual-signal",
+                                    "base-class-event",
+                                    "no-base-class-event",
+                                    "copyable-polymorphic",
+                                    "no-copyable-polymorphic",
+                                    "ctor-missing-parent-argument",
+                                    "no-ctor-missing-parent-argument",
+                                    "function-args-by-ref",
+                                    "no-function-args-by-ref",
+                                    "function-args-by-value",
+                                    "no-function-args-by-value",
+                                    "global-const-char-pointer",
+                                    "no-global-const-char-pointer",
+                                    "implicit-casts",
+                                    "no-implicit-casts",
+                                    "missing-qobject-macro",
+                                    "no-missing-qobject-macro",
+                                    "missing-typeinfo",
+                                    "no-missing-typeinfo",
+                                    "old-style-connect",
+                                    "no-old-style-connect",
+                                    "qstring-allocations",
+                                    "no-qstring-allocations",
+                                    "returning-void-expression",
+                                    "no-returning-void-expression",
+                                    "rule-of-three",
+                                    "no-rule-of-three",
+                                    "static-pmf",
+                                    "no-static-pmf",
+                                    "virtual-call-ctor",
+                                    "no-virtual-call-ctor",
+                                    "level0",
+                                    "level1",
+                                    "level2"
+                                ]
+                            },
+                            {
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "markdownDescription": "Array of clazy checks. Default are `level0` and `level1`."
                 },
                 "clazy.extraArg": {
                     "type": "array",
-                    "default": [
-                        "-Wno-unknown-warning-option"
-                    ],
-                    "description": "Additional argument to append to the compiler command line"
+                    "description": "Additional argument to append to the compiler command line."
                 },
                 "clazy.extraArgBefore": {
                     "type": "array",
-                    "default": [
-                        "-Wno-unknown-warning-option"
-                    ],
-                    "description": "Additional argument to prepend to the compiler command line"
+                    "description": "Additional argument to prepend to the compiler command line."
                 },
                 "clazy.headerFilter": {
                     "type": "string",
                     "default": "",
-                    "description": "Regular expression matching the names of the headers to output diagnostics from. Diagnostics from the main file of each translation unit are always displayed"
+                    "description": "Regular expression matching the names of the headers to output diagnostics from. Diagnostics from the main file of each translation unit are always displayed."
                 },
                 "clazy.ignoreDirs": {
                     "type": "string",
                     "default": "",
-                    "description": "Regular expression matching the names of the directories for which diagnostics should never be emitted. Useful for ignoring 3rdparty code"
+                    "description": "Regular expression matching the names of the directories for which diagnostics should never be emitted. Useful for ignoring 3rdparty code."
                 },
                 "clazy.ignoreIncludedFiles": {
                     "type": "boolean",
-                    "default": false,
-                    "description": "Only emit warnings for the current file being compiled and ignore any includes. Useful for performance reasons. Have a look at a Clazy check's README*.md file to see if it supports this feature or not"
+                    "default": true,
+                    "description": "Only emit warnings for the current file being compiled and ignore any includes. Useful for performance reasons. Have a look at a Clazy check's README*.md file to see if it supports this feature or not."
                 },
                 "clazy.onlyQt": {
                     "type": "boolean",
@@ -97,48 +297,41 @@
                 },
                 "clazy.buildPath": {
                     "type": "string",
-                    "default": "build",
-                    "description": "Path to the build folder. This folder should be where the compilation database JSON file locates at"
-                },
-                "clazy.blacklist": {
-                    "type": "array",
-                    "description": "A list of regular expressions matching files you don't want to lint. Default to build folder"
+                    "default": "",
+                    "description": "Path to the build folder. This folder should be where the compilation database JSON file is located."
                 },
                 "clazy.lintOnSave": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Automatically lint files when they are saved"
+                    "description": "Automatically lint documents when they are saved"
                 }
             }
         }
     },
     "scripts": {
-        "compile": "npm run check-types && node esbuild.mjs",
+        "vscode:prepublish": "pnpm run package",
         "check-types": "tsc --noEmit",
+        "compile": "pnpm run check-types && pnpm run format && pnpm run lint && node esbuild.mjs",
         "watch": "npm-run-all -p watch:*",
         "watch:esbuild": "node esbuild.mjs --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-        "vscode:prepublish": "npm run package",
-        "package": "npm run check-types && node esbuild.mjs --production",
+        "package": "pnpm run check-types && pnpm run format && pnpm run lint && node esbuild.mjs --production",
         "lint": "eslint src",
         "format": "prettier --write --ignore-unknown ."
     },
-    "dependencies": {
-        "yaml": "^2.7.0"
-    },
     "devDependencies": {
-        "@types/mocha": "^10.0.10",
-        "@types/node": "20.x",
-        "@types/vscode": "^1.98.0",
-        "@typescript-eslint/eslint-plugin": "^8.25.0",
-        "@typescript-eslint/parser": "^8.27.0",
-        "@vscode/test-cli": "^0.0.10",
-        "@vscode/test-electron": "^2.4.1",
-        "@vscode/vsce": "^3.3.0",
-        "esbuild": "^0.25.1",
-        "eslint": "^9.21.0",
-        "prettier": "^3.5.3",
-        "prettier-eslint": "^16.3.0",
-        "typescript": "^5.7.3"
+        "@types/node": "22.x",
+        "@types/vscode": "^1.106.1",
+        "@types/yaml": "^1.9.7",
+        "esbuild": "^0.27.1",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint": "^9.39.1",
+        "npm-run-all": "^4.1.5",
+        "prettier": "^3.7.4",
+        "typescript-eslint": "^8.48.1",
+        "typescript": "^5.9.3"
+    },
+    "dependencies": {
+        "yaml": "^2.8.2"
     }
 }

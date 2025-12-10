@@ -12,8 +12,41 @@ import {
     TextDocument,
     WorkspaceEdit,
 } from "vscode";
-
 import { ClazyReplacement } from "./clazy";
+
+function createAction(
+    document: TextDocument,
+    diagnostic: Diagnostic,
+    replacements: ClazyReplacement[],
+): CodeAction | undefined {
+    if (diagnostic.source !== "clazy") {
+        return;
+    }
+
+    const changes = new WorkspaceEdit();
+    for (const replacement of replacements) {
+        changes.replace(
+            document.uri,
+            new Range(
+                document.positionAt(replacement.offset),
+                document.positionAt(replacement.offset + replacement.length),
+            ),
+            replacement.replacementText,
+        );
+    }
+
+    return {
+        title: `[Clazy] ${diagnostic.message}`,
+        diagnostics: [diagnostic],
+        kind: CodeActionKind.QuickFix,
+        edit: changes,
+        command: {
+            title: "Save",
+            command: "clazy.private.onFixApplied",
+            arguments: [document.uri],
+        },
+    };
+}
 
 export default class ClazyRefactorActionProvider implements CodeActionProvider {
     static type = CodeActionKind.QuickFix;
@@ -25,65 +58,28 @@ export default class ClazyRefactorActionProvider implements CodeActionProvider {
         context: CodeActionContext,
         _token: CancellationToken,
     ): ProviderResult<(CodeAction | Command)[]> {
-        return context.diagnostics.reduce((acc, diagnostic) => {
+        return context.diagnostics.reduce((actions, diagnostic) => {
             const replacements =
                 ClazyRefactorActionProvider.#actions.get(diagnostic);
             if (!replacements) {
-                return acc;
+                return actions;
             }
-            const action = ClazyRefactorActionProvider.#createAction(
-                document,
-                diagnostic,
-                replacements,
-            );
+            const action = createAction(document, diagnostic, replacements);
             if (action) {
-                acc.push(action);
+                actions.push(action);
             }
-            return acc;
+            return actions;
         }, [] as CodeAction[]);
     }
 
-    static #createAction(
-        document: TextDocument,
+    static addDiagnostic(
         diagnostic: Diagnostic,
         replacements: ClazyReplacement[],
-    ): CodeAction | undefined {
-        if (diagnostic.source !== "clazy") {
-            return;
-        }
-
-        const changes = new WorkspaceEdit();
-        for (const replacement of replacements) {
-            changes.replace(
-                document.uri,
-                new Range(
-                    document.positionAt(replacement.offset),
-                    document.positionAt(
-                        replacement.offset + replacement.length,
-                    ),
-                ),
-                replacement.replacementText,
-            );
-        }
-
-        return {
-            title: `[Clazy] Apply fix`,
-            diagnostics: [diagnostic],
-            kind: CodeActionKind.QuickFix,
-            edit: changes,
-            command: {
-                title: "Save",
-                command: "clazy.private.onFixApplied",
-                arguments: [document.uri],
-            },
-        };
-    }
-
-    static add(diagnostic: Diagnostic, replacements: ClazyReplacement[]) {
+    ) {
         this.#actions.set(diagnostic, replacements);
     }
 
-    static remove(diagnostic: Diagnostic) {
+    static removeDiagnostic(diagnostic: Diagnostic) {
         this.#actions.delete(diagnostic);
     }
 }
